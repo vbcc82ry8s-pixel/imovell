@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Simulador de Possibilidade Imobiliária</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FAF8F4;
+  --panel:#FFFFFF;
+  --ink:#1B2430;
+  --muted:#68707D;
+  --line:#E9E4DB;
+  --accent:#0EA5A0;
+  --accent-ink:#07403D;
+  --accent-soft:#E4F7F5;
+  --gold:#C9862B;
+  --gold-soft:#FBF0DE;
+  --shadow:0 2px 10px rgba(27,36,48,.05), 0 10px 30px rgba(27,36,48,.06);
+  --radius:18px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:linear-gradient(180deg,#FAF8F4 0%,#F3F0E9 100%);
+  color:var(--ink);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:'Space Grotesk',system-ui,sans-serif;margin:0;letter-spacing:-0.01em;}
+button{font-family:inherit;cursor:pointer;}
+input{font-family:inherit;}
+.wrap{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:0 0 24px;}
+
+/* progress */
+.progress-bar-outer{padding:16px 20px 8px;position:sticky;top:0;background:linear-gradient(180deg,#FAF8F4 60%,rgba(250,248,244,0));z-index:5;}
+.progress-label{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;letter-spacing:.02em;}
+.progress-track{height:6px;border-radius:99px;background:var(--line);overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--gold));border-radius:99px;transition:width .45s cubic-bezier(.4,0,.2,1);}
+
+.stage{flex:1;padding:16px 20px 10px;display:flex;flex-direction:column;justify-content:center;}
+.stage.centered{align-items:center;text-align:center;justify-content:center;min-height:70vh;}
+.fadein{animation:fadeUp .45s cubic-bezier(.2,.7,.3,1) both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+
+/* hero */
+.eyebrow{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--accent-ink);font-size:12px;font-weight:600;padding:6px 12px;border-radius:99px;margin-bottom:18px;}
+.hero-title{font-size:28px;line-height:1.28;font-weight:700;color:var(--ink);}
+.hero-sub{font-size:15px;color:var(--muted);margin-top:14px;line-height:1.5;max-width:380px;}
+.hero-visual{width:100%;max-width:320px;height:150px;margin:26px auto 6px;border-radius:16px;background:linear-gradient(135deg,var(--accent-soft),var(--gold-soft));display:flex;align-items:center;justify-content:center;font-size:44px;}
+
+/* buttons */
+.btn-primary{
+  width:100%;padding:16px 20px;border:none;border-radius:14px;background:var(--ink);color:#fff;
+  font-size:15.5px;font-weight:700;letter-spacing:.01em;box-shadow:0 8px 22px rgba(27,36,48,.18);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-primary:disabled{opacity:.4;box-shadow:none;}
+.btn-primary.accent{background:linear-gradient(90deg,var(--accent),#0C8B87);}
+.btn-ghost{background:none;border:none;color:var(--muted);font-size:13.5px;font-weight:600;padding:12px;text-align:center;width:100%;}
+
+/* question */
+.q-title{font-size:21px;font-weight:700;line-height:1.32;margin-bottom:22px;}
+.options{display:flex;flex-direction:column;gap:10px;}
+.opt-card{
+  display:flex;align-items:center;gap:12px;padding:16px 16px;background:var(--panel);border:1.5px solid var(--line);
+  border-radius:14px;font-size:15px;font-weight:600;color:var(--ink);box-shadow:var(--shadow);
+  transition:border-color .15s, transform .1s, background .15s;
+}
+.opt-card:active{transform:scale(.985);}
+.opt-card:hover{border-color:var(--accent);}
+.opt-card.selected{border-color:var(--accent);background:var(--accent-soft);}
+.opt-ico{font-size:20px;flex-shrink:0;width:26px;text-align:center;}
+.opt-check{margin-left:auto;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;}
+.opt-card.selected .opt-check{background:var(--accent);border-color:var(--accent);}
+
+/* interstitial */
+.inter-ico{font-size:36px;margin-bottom:16px;}
+.inter-text{font-size:19px;font-weight:600;line-height:1.4;max-width:320px;}
+.inter-dots{display:flex;gap:6px;margin-top:22px;}
+.inter-dots span{width:7px;height:7px;border-radius:50%;background:var(--accent);opacity:.25;animation:pulse 1.1s infinite ease-in-out;}
+.inter-dots span:nth-child(2){animation-delay:.15s;}
+.inter-dots span:nth-child(3){animation-delay:.3s;}
+@keyframes pulse{0%,100%{opacity:.25;transform:scale(1);}50%{opacity:1;transform:scale(1.25);}}
+
+/* processing */
+.proc-ring{width:64px;height:64px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:spin 0.9s linear infinite;margin-bottom:22px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* result */
+.result-badge{font-size:13px;font-weight:700;color:var(--gold);background:var(--gold-soft);padding:6px 14px;border-radius:99px;margin-bottom:14px;}
+.result-title{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:12px;}
+.result-text{font-size:14.5px;color:var(--muted);line-height:1.6;margin-bottom:20px;}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;}
+.summary-item{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);}
+.summary-item .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;}
+.summary-item .val{font-size:14px;font-weight:600;margin-top:4px;}
+.social-proof{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:13px;color:var(--muted);margin-bottom:22px;display:flex;gap:10px;align-items:flex-start;box-shadow:var(--shadow);}
+
+/* capture form */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px;}
+.field input{width:100%;padding:14px 15px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);font-size:15px;color:var(--ink);}
+.field input:focus{outline:none;border-color:var(--accent);}
+.consent{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--muted);line-height:1.5;margin:16px 0 20px;}
+.consent input{margin-top:3px;flex-shrink:0;}
+
+.footer-note{text-align:center;font-size:11.5px;color:var(--muted-2,#9aa1ac);margin-top:18px;line-height:1.5;}
+.brand-foot{text-align:center;font-size:11px;color:#B7BEC9;margin-top:26px;letter-spacing:.03em;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+/* =========================================================
+   CONFIGURAÇÃO
+========================================================= */
+const WHATSAPP_NUMBER = '5565992677513'; // +55 65 99267-7513
+const STORE_KEY = 'ccti_data_v1';
+
+/* =========================================================
+   UTM + ORIGEM DA CAMPANHA
+========================================================= */
+function getParams(){
+  const p = new URLSearchParams(location.search);
+  return {
+    utm_source: p.get('utm_source')||'',
+    utm_medium: p.get('utm_medium')||'',
+    utm_campaign: p.get('utm_campaign')||'',
+    utm_content: p.get('utm_content')||'',
+    utm_term: p.get('utm_term')||'',
+    campanhaId: p.get('campanha')||'',
+    imovelId: p.get('imovel')||'',
+    clienteId: p.get('cliente')||'',
+  };
+}
+const PARAMS = getParams();
+// preserva os UTMs na sessão, mesmo se a pessoa navegar e voltar
+try{
+  const existing = sessionStorage.getItem('ccti_quiz_utm');
+  if(!existing || Object.values(PARAMS).some(v=>v)) sessionStorage.setItem('ccti_quiz_utm', JSON.stringify(PARAMS));
+}catch(e){}
+function currentUTM(){
+  try{ const s=sessionStorage.getItem('ccti_quiz_utm'); if(s) return JSON.parse(s); }catch(e){}
+  return PARAMS;
+}
+const UTM = currentUTM();
+
+/* =========================================================
+   ARMAZENAMENTO COMPARTILHADO COM O CRM
+========================================================= */
+function ensureCRMState(){
+  let s=null;
+  try{ const raw=localStorage.getItem(STORE_KEY); if(raw) s=JSON.parse(raw); }catch(e){}
+  if(!s) s={};
+  s.clients=s.clients||[]; s.properties=s.properties||[]; s.campaigns=s.campaigns||[];
+  s.leads=s.leads||[]; s.sales=s.sales||[]; s.tasks=s.tasks||[]; s.quizEvents=s.quizEvents||[];
+  return s;
+}
+function saveCRMState(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+function logEvent(eventName, extra){
+  const s=ensureCRMState();
+  s.quizEvents.push(Object.assign({
+    id:'qev_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+    event:eventName, ts:new Date().toISOString(),
+    utm_source:UTM.utm_source, utm_medium:UTM.utm_medium, utm_campaign:UTM.utm_campaign, utm_content:UTM.utm_content, utm_term:UTM.utm_term,
+    campanhaId:UTM.campanhaId||null
+  }, extra||{}));
+  saveCRMState(s);
+}
+function resolveClienteId(){
+  const s=ensureCRMState();
+  if(UTM.clienteId) return UTM.clienteId;
+  if(UTM.imovelId){ const p=s.properties.find(x=>x.id===UTM.imovelId); if(p) return p.clienteId||''; }
+  if(UTM.campanhaId){ const c=s.campaigns.find(x=>x.id===UTM.campanhaId); if(c) return c.clienteId||''; }
+  return '';
+}
+function saveLead(leadData){
+  const s=ensureCRMState();
+  leadData.id='lead_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  s.leads.push(leadData);
+  saveCRMState(s);
+  return leadData;
+}
+
+/* =========================================================
+   UTILITÁRIOS
+========================================================= */
+function esc(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+/* =========================================================
+   FLUXO DO QUIZ
+========================================================= */
+const ANSWERS={
+  objetivo:'', situacaoMoradia:'', tempoAluguel:'', renda:'', entradaValor:'', fgts:'', momentoCompra:'',
+  nome:'', whatsapp:''
+};
+
+const FLOW=[
+  {id:'hero'},
+  {id:'q_objetivo', main:1},
+  {id:'q_moradia', main:2},
+  {id:'q_tempo_aluguel', main:2, cond:a=>a.situacaoMoradia==='Pago aluguel'},
+  {id:'inter1'},
+  {id:'q_renda', main:3},
+  {id:'inter2'},
+  {id:'q_entrada', main:4},
+  {id:'q_fgts', main:4},
+  {id:'q_momento', main:5},
+  {id:'inter3'},
+  {id:'processing'},
+  {id:'result'},
+  {id:'capture'},
+  {id:'redirecting'},
+];
+let POS=0;
+let started=false;
+
+function visibleFlow(){ return FLOW.filter(s=> !s.cond || s.cond(ANSWERS)); }
+function currentStep(){ return visibleFlow()[POS]; }
+function goNext(){
+  const vf=visibleFlow();
+  if(POS<vf.length-1){ POS++; renderApp(); }
+}
+function goToId(id){
+  const vf=visibleFlow();
+  const idx=vf.findIndex(s=>s.id===id);
+  if(idx>-1){ POS=idx; renderApp(); }
+}
+
+/* progresso: baseado nas etapas "main" 1..5 */
+function progressPct(step){
+  if(!step || !step.main) return null;
+  return Math.min(100, Math.round((step.main/5)*100));
+}
+
+/* =========================================================
+   RENDER
+========================================================= */
+function renderApp(){
+  const step=currentStep();
+  const app=document.getElementById('app');
+  const pct=progressPct(step);
+  const progressHtml = pct!=null ? `
+    <div class="progress-bar-outer">
+      <div class="progress-label">Etapa ${step.main} de 5</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>` : '';
+
+  app.innerHTML = progressHtml + `<div id="stageMount"></div>` + `<div class="brand-foot">Simulador de Possibilidade Imobiliária</div>`;
+  const mount=document.getElementById('stageMount');
+  mount.innerHTML = renderers[step.id](step);
+  mount.querySelector('.fadein-target')?.classList.add('fadein');
+  attachHandlers(step);
+
+  if(step.id==='inter1' || step.id==='inter2' || step.id==='inter3'){
+    setTimeout(()=>{ if(currentStep().id===step.id) goNext(); }, 1500);
+  }
+  if(step.id==='processing'){ runProcessing(); }
+}
+
+const OBJETIVO_OPTS=[
+  ['🏠','Quero sair do aluguel'],
+  ['👨‍👩‍👧','Quero uma casa maior para minha família'],
+  ['🔑','Quero comprar meu primeiro imóvel'],
+  ['📈','Quero comprar para investir'],
+  ['🔎','Ainda estou pesquisando'],
+];
+const MORADIA_OPTS=['Pago aluguel','Moro em imóvel próprio','Moro com familiares','Outra situação'];
+const TEMPO_ALUGUEL_OPTS=['Menos de 1 ano','1 a 3 anos','3 a 5 anos','Mais de 5 anos'];
+const RENDA_OPTS=['Até R$2.500','R$2.500 a R$4.000','R$4.000 a R$6.000','R$6.000 a R$10.000','Acima de R$10.000','Prefiro não informar'];
+const ENTRADA_OPTS=['Ainda não','Até R$10.000','R$10.000 a R$30.000','R$30.000 a R$60.000','Mais de R$60.000'];
+const FGTS_OPTS=['Sim','Não','Não tenho certeza'];
+const MOMENTO_OPTS=['Estou apenas pesquisando','Nos próximos 6 meses','Nos próximos 3 meses','Quero resolver isso agora'];
+
+function optionCard(label, selected, dataAttr){
+  return `<button class="opt-card ${selected?'selected':''}" ${dataAttr}>
+    <span>${esc(label)}</span><span class="opt-check">${selected?'✓':''}</span>
+  </button>`;
+}
+
+const renderers={
+  hero: ()=>`
+    <div class="stage centered fadein-target">
+      <div class="eyebrow">✦ Simulação gratuita e sem compromisso</div>
+      <div class="hero-visual">🏡</div>
+      <h1 class="hero-title">Será que comprar um imóvel está mais perto da sua realidade do que você imagina?</h1>
+      <p class="hero-sub">Responda algumas perguntas rápidas e descubra qual cenário pode fazer sentido para você.</p>
+      <div style="width:100%;max-width:320px;margin-top:28px;">
+        <button class="btn-primary accent" id="startBtn">COMEÇAR MINHA SIMULAÇÃO</button>
+      </div>
+      <p class="footer-note" style="margin-top:18px;max-width:320px;">Seus dados serão utilizados apenas para analisar seu cenário e entrar em contato sobre possibilidades imobiliárias. Não vendemos nem compartilhamos suas informações.</p>
+    </div>`,
+
+  q_objetivo: ()=>`
+    <div class="stage fadein-target">
+      <h2 class="q-title">O que você busca neste momento?</h2>
+      <div class="options">${OBJETIVO_OPTS.map(([ico,l])=>optionCard(ico+'  '+l, ANSWERS.objetivo===l, `data-set="objetivo" data-val="${esc(l)}"`)).join('')}</div>
+    </div>`,
+
+  q_moradia: ()=>`
+    <div class="stage fadein-target">
+      <h2 class="q-title">Como você mora atualmente?</h2>
+      <div class="options">${MORADIA_OPTS.map(l=>optionCard(l, ANSWERS.situacaoMoradia===l, `data-set="situacaoMoradia" data-val="${esc(l)}"`)).join('')}</div>
+    </div>`,
+
+  q_tempo_aluguel: ()=>`
+    <div class="stage fadein-target">
+      <h2 class="q-title">Há quanto tempo você paga aluguel?</h2>
+      <div class="options">${TEMPO_ALUGUEL_OPTS.map(l=>optionCard(l, ANSWERS.tempoAluguel===l, `data-set="tempoAluguel" data-val="${esc(l)}"`)).join('')}</div>
+    </div>`,
+
+  inter1: ()=>`
+    <div class="stage centered fadein-target">
+      <div class="inter-ico">🧭</div>
+      <div class="inter-text">Estamos entendendo o seu cenário...</div>
+      <div class="inter-dots"><span></span><span></span><span></span></div>
+    </div>`,
+
+  q_renda: ()=>`
+    <div class="stage fadein-target">
+      <h2 class="q-title">Qual faixa representa melhor a renda mensal da sua família?</h2>
+      <div class="options">${RENDA_OPTS.map(l=>optionCard(l, ANSWERS.renda===l, `data-set="renda" data-val="${esc(l)}"`)).join('')}</div>
+    </div>`,
+
+  inter2: ()=>`
+    <div class="stage centered fadein-target">
+      <div class="inter-ico">✅</div>
+      <div class="inter-text">Já conseguimos identificar alguns pontos importantes do seu perfil.</div>
+      <div class="inter-dots"><span></span><span></span><span></span></div>
+    </div>`,
+
+  q_entrada: ()=>`
+    <div class="stage fadein-target">
+      <h2 class="q-title">Você teria algum valor disponível para dar como entrada?</h2>
+      <div class="options">${ENTRADA_OPTS.map(l=>optionCard(l, ANSWERS.entradaValor===l, `data-set="entradaValor" data-val="${esc(l)}"`)).join('')}</div>
+    </div>`,
+
+  q_fgts: ()=>`
+    <div class="stage fadein-target">
+      <h2 class="q-title">Você possui FGTS que poderia ser utilizado?</h2>
+      <div class="options">${FGTS_OPTS.map(l=>optionCard(l, ANSWERS.fgts===l, `data-set="fgts" data-val="${esc(l)}"`)).join('')}</div>
+    </div>`,
+
+  q_momento: ()=>`
+    <div class="stage fadein-target">
+      <h2 class="q-title">Se encontrasse uma possibilidade que fizesse sentido para sua realidade, quando gostaria de comprar?</h2>
+      <div class="options">${MOMENTO_OPTS.map(l=>optionCard(l, ANSWERS.momentoCompra===l, `data-set="momentoCompra" data-val="${esc(l)}"`)).join('')}</div>
+    </div>`,
+
+  inter3: ()=>`
+    <div class="stage centered fadein-target">
+      <div class="inter-ico">⏳</div>
+      <div class="inter-text">Falta pouco para descobrir o próximo passo.</div>
+      <div class="inter-dots"><span></span><span></span><span></span></div>
+    </div>`,
+
+  processing: ()=>`
+    <div class="stage centered fadein-target">
+      <div class="proc-ring"></div>
+      <div class="inter-text" id="procText">Analisando suas respostas...</div>
+    </div>`,
+
+  result: ()=>{
+    const cls=classify(ANSWERS);
+    return `
+    <div class="stage fadein-target">
+      <div class="result-badge">✦ Sua análise está pronta</div>
+      <h2 class="result-title">Seu perfil merece uma simulação personalizada.</h2>
+      <p class="result-text">Pelas informações que você forneceu, pode existir uma possibilidade de financiamento compatível com o seu cenário. Para descobrir valores reais, é necessário analisar sua renda, entrada, FGTS e as condições disponíveis.</p>
+      <div class="summary-grid">
+        <div class="summary-item"><div class="lbl">Seu objetivo</div><div class="val">${esc(ANSWERS.objetivo||'—')}</div></div>
+        <div class="summary-item"><div class="lbl">Sua renda</div><div class="val">${esc(ANSWERS.renda||'—')}</div></div>
+        <div class="summary-item"><div class="lbl">Entrada</div><div class="val">${esc(ANSWERS.entradaValor||'—')}</div></div>
+        <div class="summary-item"><div class="lbl">FGTS</div><div class="val">${esc(ANSWERS.fgts||'—')}</div></div>
+        <div class="summary-item" style="grid-column:1/-1;"><div class="lbl">Momento</div><div class="val">${esc(ANSWERS.momentoCompra||'—')}</div></div>
+      </div>
+      <div class="social-proof">🟢 <span><strong>Simulação personalizada.</strong> Suas respostas serão analisadas para indicar o próximo passo mais adequado ao seu momento.</span></div>
+      <button class="btn-primary accent" id="ctaBtn">QUERO DESCOBRIR MINHA POSSIBILIDADE</button>
+    </div>`;
+  },
+
+  capture: ()=>`
+    <div class="stage fadein-target">
+      <h2 class="q-title">Onde podemos enviar sua análise?</h2>
+      <div class="field"><label>Nome</label><input type="text" id="inpNome" placeholder="Seu nome" value="${esc(ANSWERS.nome)}"></div>
+      <div class="field"><label>WhatsApp</label><input type="tel" id="inpWhats" placeholder="(DDD) 90000-0000" value="${esc(ANSWERS.whatsapp)}"></div>
+      <div class="consent">
+        <input type="checkbox" id="inpConsent">
+        <label for="inpConsent">Autorizo o uso dos meus dados para analisar meu cenário e entrar em contato sobre possibilidades imobiliárias. Meus dados não serão vendidos nem compartilhados.</label>
+      </div>
+      <button class="btn-primary accent" id="submitBtn" disabled>CONTINUAR PARA O WHATSAPP</button>
+    </div>`,
+
+  redirecting: ()=>`
+    <div class="stage centered fadein-target">
+      <div class="proc-ring"></div>
+      <div class="inter-text">Perfeito! Redirecionando você para o WhatsApp...</div>
+      <p class="footer-note" style="margin-top:18px;">Se o WhatsApp não abrir automaticamente, <a href="${window.__waLink||'#'}" style="color:var(--accent-ink);font-weight:600;">toque aqui</a>.</p>
+    </div>`,
+};
+
+function attachHandlers(step){
+  if(step.id==='hero'){
+    document.getElementById('startBtn').onclick=()=>{
+      if(!started){ started=true; logEvent('QuizStarted'); }
+      goNext();
+    };
+  }
+  if(step.id.startsWith('q_')){
+    document.querySelectorAll('.opt-card').forEach(btn=>{
+      btn.onclick=()=>{
+        const key=btn.dataset.set, val=btn.dataset.val;
+        ANSWERS[key]=val;
+        logEvent('QuizStepCompleted', {step:step.id, resposta:val});
+        setTimeout(goNext, 260);
+        renderApp(); // feedback visual imediato de seleção antes do avanço
+      };
+    });
+  }
+  if(step.id==='result'){
+    document.getElementById('ctaBtn').onclick=()=>{ logEvent('QuizCompleted'); goNext(); };
+  }
+  if(step.id==='capture'){
+    const nome=document.getElementById('inpNome'), whats=document.getElementById('inpWhats'), consent=document.getElementById('inpConsent'), btn=document.getElementById('submitBtn');
+    function validate(){
+      const digits=(whats.value.match(/\d/g)||[]).length;
+      btn.disabled = !(nome.value.trim().length>=2 && digits>=10 && consent.checked);
+    }
+    nome.oninput=validate; whats.oninput=validate; consent.onchange=validate;
+    btn.onclick=()=>{
+      ANSWERS.nome=nome.value.trim(); ANSWERS.whatsapp=whats.value.trim();
+      submitLead();
+    };
+  }
+}
+
+/* =========================================================
+   PROCESSAMENTO (tela de análise)
+========================================================= */
+function runProcessing(){
+  const msgs=['Analisando suas respostas...','Cruzando seu objetivo, renda, entrada e momento de compra...','Sua análise está pronta.'];
+  let i=0;
+  const el=()=>document.getElementById('procText');
+  const iv=setInterval(()=>{
+    i++;
+    if(i>=msgs.length){ clearInterval(iv); setTimeout(goNext, 500); return; }
+    if(el()) el().textContent=msgs[i];
+  }, 950);
+}
+
+/* =========================================================
+   CLASSIFICAÇÃO INTERNA (não exibida ao usuário como aprovação)
+========================================================= */
+function classify(a){
+  let score=0;
+  if(a.momentoCompra==='Quero resolver isso agora') score+=3;
+  else if(a.momentoCompra==='Nos próximos 3 meses') score+=2;
+  else if(a.momentoCompra==='Nos próximos 6 meses') score+=1;
+
+  if(a.entradaValor==='Mais de R$60.000' || a.entradaValor==='R$30.000 a R$60.000') score+=2;
+  else if(a.entradaValor==='R$10.000 a R$30.000' || a.entradaValor==='Até R$10.000') score+=1;
+
+  if(a.fgts==='Sim') score+=1;
+  else if(a.fgts==='Não tenho certeza') score+=0.5;
+
+  if(a.objetivo && a.objetivo!=='Ainda estou pesquisando') score+=1;
+
+  let nivel='Baixa intenção', temperatura='Frio';
+  if(score>=5){ nivel='Alta intenção'; temperatura='Quente'; }
+  else if(score>=2.5){ nivel='Média intenção'; temperatura='Morno'; }
+  return {nivel, temperatura, score};
+}
+
+/* =========================================================
+   ORIGEM (mapeia utm_source para as opções já usadas no CRM)
+========================================================= */
+function mapOrigem(){
+  const src=(UTM.utm_source||'').toLowerCase();
+  if(src.includes('face')) return 'Facebook';
+  if(src.includes('insta')) return 'Instagram';
+  if(src.includes('google')) return 'Google';
+  if(src.includes('whats')) return 'WhatsApp';
+  if(src) return 'Site';
+  return 'Site';
+}
+
+/* =========================================================
+   ENVIO DO LEAD + REDIRECIONAMENTO PARA O WHATSAPP
+========================================================= */
+function submitLead(){
+  const cls=classify(ANSWERS);
+  const clienteId=resolveClienteId();
+  const obsLines=[
+    'Lead originado do Simulador de Possibilidade Imobiliária.',
+    'Objetivo: '+(ANSWERS.objetivo||'—'),
+    'Situação de moradia: '+(ANSWERS.situacaoMoradia||'—') + (ANSWERS.tempoAluguel?' ('+ANSWERS.tempoAluguel+' pagando aluguel)':''),
+    'Faixa de renda: '+(ANSWERS.renda||'—'),
+    'Entrada disponível: '+(ANSWERS.entradaValor||'—'),
+    'Possui FGTS: '+(ANSWERS.fgts||'—'),
+    'Momento de compra: '+(ANSWERS.momentoCompra||'—'),
+    'Classificação interna: '+cls.nivel+' (uso comercial, não representa aprovação de crédito).',
+    UTM.utm_source?('UTM Source: '+UTM.utm_source):'',
+    UTM.utm_medium?('UTM Medium: '+UTM.utm_medium):'',
+    UTM.utm_campaign?('UTM Campaign: '+UTM.utm_campaign):'',
+    UTM.utm_content?('UTM Content: '+UTM.utm_content):'',
+    UTM.utm_term?('UTM Term: '+UTM.utm_term):'',
+  ].filter(Boolean).join('\n');
+
+  const lead={
+    nome: ANSWERS.nome, telefone: ANSWERS.whatsapp, whatsapp: ANSWERS.whatsapp,
+    dataEntrada: todayISO(), clienteId: clienteId||'', campanhaId: UTM.campanhaId||'', imovelId: UTM.imovelId||'',
+    origem: mapOrigem(), status:'Novo', temperatura: cls.temperatura,
+    faixaOrcamento: ANSWERS.renda, possuiEntrada: ANSWERS.entradaValor!=='Ainda não', precisaFinanciar: true,
+    interesse: ANSWERS.objetivo, obs: obsLines,
+    // dados extras do quiz, preservados no registro para referência futura
+    quizOrigin:true, quizClassificacao:cls.nivel, quizScore:cls.score,
+    situacaoMoradia:ANSWERS.situacaoMoradia, tempoAluguel:ANSWERS.tempoAluguel, renda:ANSWERS.renda,
+    entradaValor:ANSWERS.entradaValor, fgts:ANSWERS.fgts, momentoCompra:ANSWERS.momentoCompra,
+    utm_source:UTM.utm_source, utm_medium:UTM.utm_medium, utm_campaign:UTM.utm_campaign, utm_content:UTM.utm_content, utm_term:UTM.utm_term,
+  };
+  saveLead(lead);
+  logEvent('Lead', {nome:lead.nome, classificacao:cls.nivel});
+
+  const msgLines=[
+    'Olá! Acabei de fazer a simulação de possibilidade de compra de imóvel e gostaria de entender melhor meu cenário.',
+    '',
+    'Meu objetivo: '+(ANSWERS.objetivo||'—').toLowerCase()+'.',
+    'Faixa de renda: '+(ANSWERS.renda||'—')+'.',
+    'Entrada: '+(ANSWERS.entradaValor||'—')+'.',
+    'Tenho FGTS: '+(ANSWERS.fgts||'—').toLowerCase()+'.',
+    'Pretendo comprar: '+(ANSWERS.momentoCompra||'—').toLowerCase()+'.',
+    '',
+    'Gostaria de entender quais possibilidades tenho.'
+  ];
+  const waLink='https://wa.me/'+WHATSAPP_NUMBER+'?text='+encodeURIComponent(msgLines.join('\n'));
+  window.__waLink=waLink;
+
+  goToId('redirecting');
+  logEvent('WhatsAppClick');
+  setTimeout(()=>{ window.location.href=waLink; }, 900);
+}
+
+/* =========================================================
+   INÍCIO
+========================================================= */
+logEvent('PageView');
+renderApp();
+</script>
+</body>
+</html>
